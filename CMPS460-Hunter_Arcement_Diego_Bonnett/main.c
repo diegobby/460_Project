@@ -88,13 +88,13 @@ int main()
                 sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
                 sqlite3_step(stmt2);
 
-                printf("    <option value=\"%d\">%s %s %s Valued at $%.2f VIN:%d Id:%d</option>\n",
+                printf("    <option value=\"%d\">%s %s %s Valued at $%.2f VIN:%s Id:%d</option>\n",
                        sqlite3_column_int(stmt, 0),
                        sqlite3_column_text(stmt, 1),
                        sqlite3_column_text(stmt2, 0),
                        sqlite3_column_text(stmt2, 1),
                        sqlite3_column_double(stmt, 5),
-                       sqlite3_column_int(stmt, 9),
+                       sqlite3_column_text(stmt, 9),
                        sqlite3_column_int(stmt, 0));
             }
 
@@ -243,6 +243,68 @@ int main()
         {
 
         }
+        //UpdateCar.html GET logic
+        else if (query_string && strstr(query_string, "page=UpdateCar"))
+        {
+
+        }
+        //UpdateCarDecide.html GET logic
+        else if (query_string && strstr(query_string, "page=UpdateCarDecide"))
+        {
+            //print header info
+            printf("Content-type: text/html\n\n");
+
+            sqlite3* db = Connect(); // Connect to the database
+            sqlite3_stmt *stmt;
+            int rc;
+
+            // Query to get car names
+            const char *sql = "SELECT * FROM Car;";
+            rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+            if (rc != SQLITE_OK)
+            {
+                printf("<p>Error preparing query: %s</p>\n", sqlite3_errmsg(db));
+                sqlite3_close(db);
+                return 1;
+            }
+
+            // Generate the form
+            printf("<h1 class=\"main_container\">Choose a Car to Update</h1>\n");
+            printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+            // Hidden input to pass the page context
+            printf("<input type=\"hidden\" name=\"page\" value=\"update\">\n");
+            printf(" <input type=\"hidden\" name=\"action\" value=\"update\">\n");
+
+            printf("  <label for=\"car\">Select Car to Update:</label>\n");
+
+            // Fetch and display car names as datalist options
+            printf("<select style=\"width: 500px;\" id=\"car\" name=\"update\" required>\n");
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                char query[MAXLEN];
+                snprintf(query, sizeof(query),
+                         "SELECT Make.Name, Model.Name FROM Make, Model WHERE Make.Id = %d AND Model.Id = %d",
+                         sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4));
+                sqlite3_stmt *stmt2;
+                sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
+                sqlite3_step(stmt2);
+
+                printf("    <option value=\"%d\">%s %s %s Valued at $%.2f VIN:%s Id:%d</option>\n",
+                       sqlite3_column_int(stmt, 0),
+                       sqlite3_column_text(stmt, 1),
+                       sqlite3_column_text(stmt2, 0),
+                       sqlite3_column_text(stmt2, 1),
+                       sqlite3_column_double(stmt, 5),
+                       sqlite3_column_text(stmt, 9),
+                       sqlite3_column_int(stmt, 0));
+            }
+
+            printf("</select>\n");
+            printf("  <input type=\"submit\" value=\"Update\">\n");
+            printf("</form>\n");
+
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+        }
         //otherwise, go to the main screen (as a backup or if loaded via this script instead of by html page)
         else
         {
@@ -307,7 +369,7 @@ int main()
                     char query[MAXLEN];
                     snprintf(query, sizeof(query),
                              "DELETE FROM Car WHERE Id = %d", id);
-                    sqlite3_exec(db, query, NULL ,0, &errMssg);
+                    int result = sqlite3_exec(db, query, NULL ,0, &errMssg);
 
                     //add the record to the database (still need the id of the employee from POST)
 
@@ -346,13 +408,13 @@ int main()
                         sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
                         sqlite3_step(stmt2);
 
-                        printf("    <option value=\"%d\">%s %s %s Valued at $%.2f VIN:%d Id:%d</option>\n",
+                        printf("    <option value=\"%d\">%s %s %s Valued at $%.2f VIN:%s Id:%d</option>\n",
                                sqlite3_column_int(stmt, 0),
                                sqlite3_column_text(stmt, 1),
                                sqlite3_column_text(stmt2, 0),
                                sqlite3_column_text(stmt2, 1),
                                sqlite3_column_double(stmt, 5),
-                               sqlite3_column_int(stmt, 9),
+                               sqlite3_column_text(stmt, 9),
                                sqlite3_column_int(stmt, 0));
                     }
 
@@ -362,6 +424,15 @@ int main()
 
                     sqlite3_finalize(stmt);
                     sqlite3_close(db);
+
+                    if (result != SQLITE_OK) //if the result int was a not ok, declare to the user that there was an error inserting the entry
+                    {
+                        printf("<p>Deletion Error</p>");
+                    }
+                    else if(result == SQLITE_OK)
+                    {
+                        printf("<p>Deletion Successful</p>");
+                    }
                 }
             }
             else if (strncmp(action, "add", 3) == 0)
@@ -397,7 +468,7 @@ int main()
                 int year = atoi(strstr(post_data_3, "year=") + 5);
                 int mileage = atoi(strstr(post_data_3, "mileage=") + 8);
                 float value = atof(strstr(post_data_3, "value=") + 6);
-                const char *vin = strstr(post_data_3, "vin=") + 4;
+                char *vin = strstr(post_data_3, "vin=") + 4;
                 double mpg = atof(strstr(post_data_3, "mpg=") + 4);
                 char *license_plate = strstr(post_data_3, "license_plate=") + 15;
                 const char *color = strstr(post_data_3, "color=") + 6;
@@ -416,11 +487,25 @@ int main()
                     strcpy(license_plate, license_plate);
                 }
 
+                //additional handling for the vin
+                delimiter_pos = strchr(vin, '&'); //get where the & is
+                if (delimiter_pos != NULL)
+                {
+                    // Copy the substring up to the delimiter
+                    size_t length = delimiter_pos - vin; // Length of substring up to delimiter
+                    strncpy(vin, vin, length);  // Copy the substring into the output
+                    vin[length] = '\0';         // Null-terminate the output string
+                } else
+                {
+                    // If no delimiter is found, copy the whole string
+                    strcpy(vin, vin);
+                }
+
                 //perform the insertion
                 sqlite3* db = Connect();
                 sqlite3_stmt *stmt;
                 char *query = //%Q escapes the strings (sql injection-proof)
-                        "INSERT INTO Car (Color, Year, Make, Model, Value, Mileage, LicPlate, Miles_PerGal, Vin"
+                        "INSERT INTO Car (Color, Year, Make, Model, Value, Mileage, LicPlate, Miles_PerGal, Vin)"
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 int rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
                 //bind the parameters
@@ -437,6 +522,15 @@ int main()
                 //close the statement
                 sqlite3_step(stmt); //execute
                 sqlite3_finalize(stmt);
+
+                if (rc != SQLITE_OK) //if the result int was a not ok, declare to the user that there was an error inserting the entry
+                {
+                    printf("<p>Insertion Error</p>");
+                }
+                else if(rc == SQLITE_OK)
+                {
+                    printf("<p>Insertion Successful</p>");
+                }
 
                 //add the record of the action to the record table
 
@@ -509,11 +603,14 @@ int main()
                 sqlite3_finalize(stmt2);
                 sqlite3_close(db);
             }
-            else if (strncmp(action, "update", 6) == 0)
+            else if (strncmp(action, "updateDecide", 6) == 0) //if bad, print same form as GET, if good, print next form
             {
 
             }
+            else if (strncmp(action, "update", 6) == 0) //either way print the same form for this part
+            {
 
+            }
 
         }
     }
