@@ -262,6 +262,8 @@ int main()
         read_post_data(post_data, MAXLEN);
         char post_data_2[MAXLEN];
         strcpy(post_data_2, post_data);
+        char post_data_3[MAXLEN];
+        strcpy(post_data_3, post_data);
 
         // Determine the action
         char *action = strstr(post_data, "action=");
@@ -371,46 +373,48 @@ int main()
                 {
                     car_data += 4; // Skip "add="
 
-                    // Extract the make_model value (e.g., "1:1")
+                    //extract the make_model value (e.g., "1:1")
                     char *make_model = strstr(car_data, "make_model=");
                     if (make_model)
                     {
                         make_model += 11;  // Skip "make_model=" part
 
-                        // Now, split the make_model field by the colon ":"
+                        //split the make_model field by the colon ":"
                         char *make = strtok(make_model, "%3A");
                         if (make)
                         {
-                            make_id = atoi(make);  // Convert to integer for Make ID
+                            make_id = atoi(make);  //convert to integer for Make ID
                             char *model = strtok(NULL, "%3A");
                             if (model)
                             {
-                                model_id = atoi(model);  // Convert to integer for Model ID
+                                model_id = atoi(model);  //convert to integer for Model ID
                             }
                         }
                     }
                 }
 
-                printf("<p>POSTDATA:%s</p>",post_data);
+                //extract the other fields
+                int year = atoi(strstr(post_data_3, "year=") + 5);
+                int mileage = atoi(strstr(post_data_3, "mileage=") + 8);
+                float value = atof(strstr(post_data_3, "value=") + 6);
+                const char *vin = strstr(post_data_3, "vin=") + 4;
+                double mpg = atof(strstr(post_data_3, "mpg=") + 4);
+                char *license_plate = strstr(post_data_3, "license_plate=") + 15;
+                const char *color = strstr(post_data_3, "color=") + 6;
 
-                //get the fields
-                int year = atoi(strstr(post_data, "year=") + 5);
-                int mileage = atoi(strstr(post_data, "mileage=") + 8);
-                double value = atof(strstr(post_data, "value=") + 6);
-                int vin = atoi(strstr(post_data, "vin=") + 4);
-                double mpg = atof(strstr(post_data, "mpg=") + 4);
-                const char *license_plate = strstr(post_data, "license_plate=") + 15;
-                const char *color = strstr(post_data, "color=") + 6;
-
-                printf("<p>Color:%s</p>",color);
-                printf("<p>Year:%d</p>",year);
-                printf("<p>Make:%d</p>",make_id);
-                printf("<p>Model:%d</p>",model_id);
-                printf("<p>Value:%.2f</p>",value);
-                printf("<p>Mileage:%d</p>",mileage);
-                printf("<p>LicPlate:%s</p>",license_plate);
-                printf("<p>MPG:%.1f</p>",mpg);
-                printf("<p>VIN:%d</p>",vin);
+                //additional handling for the license_plate
+                char *delimiter_pos = strchr(license_plate, '&'); //get where the & is
+                if (delimiter_pos != NULL)
+                {
+                    // Copy the substring up to the delimiter
+                    size_t length = delimiter_pos - license_plate; // Length of substring up to delimiter
+                    strncpy(license_plate, license_plate, length);  // Copy the substring into the output
+                    license_plate[length] = '\0';         // Null-terminate the output string
+                } else
+                {
+                    // If no delimiter is found, copy the whole string
+                    strcpy(license_plate, license_plate);
+                }
 
                 //perform the insertion
                 sqlite3* db = Connect();
@@ -428,13 +432,11 @@ int main()
                 sqlite3_bind_int(stmt, 6, mileage);
                 sqlite3_bind_text(stmt, 7, license_plate, (int) strlen(license_plate), SQLITE_TRANSIENT);
                 sqlite3_bind_double(stmt, 8, mpg);
-                sqlite3_bind_int(stmt, 9, vin);
+                sqlite3_bind_text(stmt, 9, vin, (int) strlen(vin), SQLITE_TRANSIENT);
 
                 //close the statement
                 sqlite3_step(stmt); //execute
                 sqlite3_finalize(stmt);
-
-                printf("<p>Car Successfully Added!%d</p>",rc);
 
                 //add the record of the action to the record table
 
@@ -530,7 +532,7 @@ sqlite3* Connect()
     //create the tables
     char* messageErr;
     sqlite3_exec(db,
-       "CREATE TABLE IF NOT EXISTS Car(Id INTEGER PRIMARY KEY AUTOINCREMENT, Color TEXT NOT NULL, Year INTEGER NOT NULL, Make INTEGER NOT NULL, Model INTEGER NOT NULL, Value FLOAT NOT NULL, Mileage INTEGER NOT NULL, LicPlate VARCHAR(8) NOT NULL UNIQUE, Miles_PerGal INTEGER NOT NULL, Vin TEXT NOT NULL UNIQUE, FOREIGN KEY (Make) REFERENCES Make(Id), FOREIGN KEY (Model) REFERENCES Model(Id))"
+       "CREATE TABLE IF NOT EXISTS Car(Id INTEGER PRIMARY KEY AUTOINCREMENT, Color TEXT NOT NULL, Year INTEGER NOT NULL, Make INTEGER NOT NULL, Model INTEGER NOT NULL, Value FLOAT NOT NULL, Mileage INTEGER NOT NULL, LicPlate VARCHAR(8) NOT NULL UNIQUE, Miles_PerGal FLOAT NOT NULL, Vin TEXT NOT NULL UNIQUE, FOREIGN KEY (Make) REFERENCES Make(Id), FOREIGN KEY (Model) REFERENCES Model(Id))"
        ,NULL, 0, &messageErr);
     sqlite3_exec(db,
         "CREATE TABLE IF NOT EXISTS Make(Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE)"
