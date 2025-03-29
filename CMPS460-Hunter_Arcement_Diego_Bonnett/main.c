@@ -286,7 +286,7 @@ int main()
         {
             //print header info
             printf("Content-type: text/html\n\n");
-            
+
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
             int rc;
@@ -312,7 +312,8 @@ int main()
 
             // Fetch and display car names as datalist options
             printf("<select style=\"width: 500px;\" id=\"car\" name=\"update\" required>\n");
-            while (sqlite3_step(stmt) == SQLITE_ROW) {
+            while (sqlite3_step(stmt) == SQLITE_ROW)
+            {
                 char query[MAXLEN];
                 snprintf(query, sizeof(query),
                          "SELECT Make.Name, Model.Name FROM Make, Model WHERE Make.Id = %d AND Model.Id = %d",
