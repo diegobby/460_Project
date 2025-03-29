@@ -191,42 +191,50 @@ int main()
         //EmployeeLogin.html GET logic
         else if (query_string && strstr(query_string, "page=EmployeeLogin"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //FindByLicPlate.html GET logic
         else if (query_string && strstr(query_string, "page=FindByLicPlate"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //FindByVIN.html GET logic
         else if (query_string && strstr(query_string, "page=FindByVin"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByColor.html GET logic
         else if (query_string && strstr(query_string, "page=ListByColor"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByMake.html GET logic
         else if (query_string && strstr(query_string, "page=ListByMake"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByMileage.html GET logic
         else if (query_string && strstr(query_string, "page=ListByMileage"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByMilePerGal.html GET logic
         else if (query_string && strstr(query_string, "page=ListByMilePerGal"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByModel.html GET logic
         else if (query_string && strstr(query_string, "page=ListByModel"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListByValue.html GET logic
         else if (query_string && strstr(query_string, "page=ListByValue"))
@@ -258,17 +266,20 @@ int main()
         //ListByYear.html GET logic
         else if (query_string && strstr(query_string, "page=ListByYear"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //ListModelByMake.html GET logic
         else if (query_string && strstr(query_string, "page=ListModelByMake"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //UpdateCar.html GET logic
         else if (query_string && strstr(query_string, "page=UpdateCar"))
         {
-
+            //print header info
+            printf("Content-type: text/html\n\n");
         }
         //UpdateCarDecide.html GET logic
         else if (query_string && strstr(query_string, "page=UpdateCarDecide"))
