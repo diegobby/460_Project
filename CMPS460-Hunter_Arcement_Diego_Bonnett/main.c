@@ -275,12 +275,12 @@ int main()
         {
             //print header info
             printf("Content-type: text/html\n\n");
-
+            
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
             int rc;
 
-            // Query to get car names
+            // Query to get cars
             const char *sql = "SELECT * FROM Car;";
             rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
             if (rc != SQLITE_OK)
@@ -321,7 +321,7 @@ int main()
             }
 
             printf("</select>\n");
-            printf("  <input type=\"submit\" value=\"Update\">\n");
+            printf("<input type=\"submit\" value=\"Update\">\n");
             printf("</form>\n");
 
             sqlite3_finalize(stmt);
