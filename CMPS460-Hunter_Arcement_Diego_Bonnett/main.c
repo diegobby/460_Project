@@ -36,6 +36,9 @@ void get_post_data(char *, size_t);
 void read_post_data(char *, int);
 void url_decode(char *);
 
+//converter for hex to bytes (hashing)
+int hex_to_bytes(const char*, uint8_t*);
+
 //prototype for the function that adds records to the database (called for some actions such as login, add/remove cars, etc)
 void AddRecord(sqlite3*, char [], int);
 
@@ -193,6 +196,24 @@ int main()
         {
             //print header info
             printf("Content-type: text/html\n\n");
+
+            //generate the form
+            printf("<h1 class=\"main_container\">Employee Sign In</h1>\n");
+            printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+            // Hidden input to pass the page context
+            printf("<input type=\"hidden\" name=\"page\" value=\"SignIn\">\n");
+            printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
+
+            //username
+            printf("<input type=\"text\" id=\"username\" value=\"username\" required>\n");
+            printf("<label for=\"username\" >Username </label>");
+
+            //password
+            printf("<input type=\"password\" id=\"pass\" value=\"pass\" required>\n");
+            printf("<label for=\"pass\" >Password </label>");
+
+            printf("<br><input type=\"submit\" value=\"Sign In\">\n");
+            printf("</form>\n");
         }
         //FindByLicPlate.html GET logic
         else if (query_string && strstr(query_string, "page=FindByLicPlate"))
@@ -276,10 +297,12 @@ int main()
             printf("Content-type: text/html\n\n");
         }
         //UpdateCar.html GET logic
-        else if (query_string && strstr(query_string, "page=UpdateCar"))
+        else if (query_string && strstr(query_string, "page=UpdateCarMain"))
         {
             //print header info
             printf("Content-type: text/html\n\n");
+
+
         }
         //UpdateCarDecide.html GET logic
         else if (query_string && strstr(query_string, "page=UpdateCarDecide"))
@@ -637,13 +660,192 @@ int main()
                 sqlite3_finalize(stmt2);
                 sqlite3_close(db);
             }
-            else if (strncmp(action, "updateDecide", 6) == 0) //if bad, print same form as GET, if good, print next form
+            else if (strncmp(action, "SignIn", 6) == 0)
             {
+                char *employee = strstr(post_data, "remove=");
+                if (employee)
+                {
+                    //get the username and password information from the POST data
+                    char *username = strstr(post_data_3, "username=") + 10;
 
-            }
-            else if (strncmp(action, "update", 6) == 0) //either way print the same form for this part
-            {
+                    //additional handling for the username
+                    char *delimiter_pos = strchr(username, '&'); //get where the & is
+                    if (delimiter_pos != NULL)
+                    {
+                        // Copy the substring up to the delimiter
+                        size_t length = delimiter_pos - username; // Length of substring up to delimiter
+                        strncpy(username, username, length);  // Copy the substring into the output
+                        username[length] = '\0';         // Null-terminate the output string
+                    }
+                    else
+                    {
+                        // If no delimiter is found, copy the whole string
+                        strcpy(username, username);
+                    }
 
+                    char *password = strstr(post_data_3, "password=") + 10;
+
+                    //additional handling for the password
+                    delimiter_pos = strchr(password, '&'); //get where the & is
+                    if (delimiter_pos != NULL)
+                    {
+                        // Copy the substring up to the delimiter
+                        size_t length = delimiter_pos - password; // Length of substring up to delimiter
+                        strncpy(password, password, length);  // Copy the substring into the output
+                        password[length] = '\0';         // Null-terminate the output string
+                    }
+                    else
+                    {
+                        // If no delimiter is found, copy the whole string
+                        strcpy(password, password);
+                    }
+
+                    //see if the username exists in the database, if so get the salt (for the hash check)
+                    //if not then reprint the page with the user feedback message
+                    sqlite3 *db = Connect(); //connect to the database
+                    sqlite3_stmt *stmt;
+                    char sql[] = "SELECT * FROM Employee WHERE LOWER(Username) = LOWER(?)"; //LOWER() used to check username in lowercase
+                    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+                    if (sqlite3_step(stmt) != SQLITE_ROW) //username did not exist
+                    {
+                        //user feedback
+                        printf("<p>Username or Password invalid, please ensure your username and password are correct.</p>\n");
+
+                        //generate the form
+                        printf("<h1 class=\"main_container\">Employee Sign In</h1>\n");
+                        printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                        // Hidden input to pass the page context
+                        printf("<input type=\"hidden\" name=\"page\" value=\"SignIn\">\n");
+                        printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
+
+                        //username
+                        printf("<input type=\"text\" id=\"username\" value=\"username\" required>\n");
+                        printf("<label for=\"username\" >Username </label>");
+
+                        //password
+                        printf("<input type=\"password\" id=\"pass\" value=\"pass\" required>\n");
+                        printf("<label for=\"pass\" >Password </label>");
+
+                        printf("<br><input type=\"submit\" value=\"Sign In\">\n");
+                        printf("</form>\n");
+                    }
+
+                    //get the salt (text in column index 3), then assemble the password + salt + pepper
+                    //pepper is HRFWWTAP (Hunter Runs From Women When They Approach Him)
+                    char HashMe[1024]; // Ensure this buffer is large enough for the concatenated string
+                    snprintf(HashMe, sizeof(HashMe), "%s%sHRFWWTAH", password, sqlite3_column_text(stmt, 3));
+                    SHA256_CTX ctx;
+                    uint8_t hash[SHA256_BLOCK_SIZE];
+                    sha256_init(&ctx);
+                    sha256_update(&ctx, (uint8_t *) HashMe, strlen(HashMe));
+                    sha256_final(&ctx, hash);
+
+                    //figure out if the username-password combination are correct
+                    //if not, reprint the page with the user feedback message
+                    // Retrieve the hash from the database (example: hex string)
+                    const char *stored_hash_hex = sqlite3_column_text(stmt, 2);
+                    uint8_t stored_hash[SHA256_BLOCK_SIZE];
+
+                    // Convert the stored hex string to a byte array
+                    if (hex_to_bytes(stored_hash_hex, stored_hash) != 0)
+                    {
+                        printf("Error: Invalid hexadecimal string.\n");
+                        return 1;
+                    }
+
+                    // Compare the generated hash with the stored hash
+                    if (memcmp(hash, stored_hash, SHA256_BLOCK_SIZE) == 0)
+                    {
+                        //generate the new form (get what action this employee wants to do)
+                        //get the employee id for the POST to the other pages
+                        int id = sqlite3_column_int(stmt, 0);
+                        sqlite3_finalize(stmt);
+
+                        //generate the form
+                        printf("<h1 class=\"main_container\">Employee Sign In</h1>\n");
+                        printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                        // Hidden input to pass the page context
+                        printf("<input type=\"hidden\" name=\"page\" value=\"perform\">\n");
+                        printf("<input type=\"hidden\" name=\"action\" value=\"perform\">\n");
+                        printf("<input type=\"hidden\" name=\"emp_id\" value=\"%d\">\n", id); //employee's id being passed to next screen
+
+                        //actions
+                        printf("<p>Select Action \'%s\':</p>", username);
+                        printf("<input type=\"radio\" name=\"userAction\" id=\"remove\" value=\"remove\" required>");
+                        printf("<label for=\"remove\" >Remove Car From Database</label>");
+                        printf("<input type=\"radio\" name=\"userAction\" id=\"add\" value=\"add\" required>");
+                        printf("<label for=\"add\">Add Car To Database</label>");
+                        printf("<input type=\"radio\" name=\"userAction\" id=\"update\" value=\"update\" required>");
+                        printf("<label for=\"update\">Update Car In Database</label>");
+
+                        printf("<br><input type=\"submit\" value=\"Perform\">\n");
+                        printf("</form>\n");
+                    }
+                    else
+                    {
+                        //user feedback
+                        printf("<p>Username or Password invalid, please ensure your username and password are correct. DEBUG=2</p>\n");
+
+                        //generate the form
+                        printf("<h1 class=\"main_container\">Employee Sign In</h1>\n");
+                        printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                        // Hidden input to pass the page context
+                        printf("<input type=\"hidden\" name=\"page\" value=\"SignIn\">\n");
+                        printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
+
+                        //username
+                        printf("<input type=\"text\" id=\"username\" value=\"username\" required>\n");
+                        printf("<label for=\"username\" >Username </label>");
+
+                        //password
+                        printf("<input type=\"password\" id=\"pass\" value=\"pass\" required>\n");
+                        printf("<label for=\"pass\" >Password </label>");
+
+                        printf("<br><input type=\"submit\" value=\"Sign In\">\n");
+                        printf("</form>\n");
+                    }
+                }
+                else //for this section we are dealing with POST from the second form (get the info and redirect via POST)
+                {
+                    //get the value of the radio button AND the employee id from the POST
+                    int emp_id = atoi(strstr(post_data_3, "emp_id=") + 8);
+                    char *userAction = strstr(post_data_3, "userAction=") + 12;
+
+                    //additional handling for the userAction
+                    char *delimiter_pos = strchr(userAction, '&'); //get where the & is
+                    if (delimiter_pos != NULL)
+                    {
+                        // Copy the substring up to the delimiter
+                        size_t length = delimiter_pos - userAction; // Length of substring up to delimiter
+                        strncpy(userAction, userAction, length);  // Copy the substring into the output
+                        userAction[length] = '\0'; // Null-terminate the output string
+                    }
+                    else
+                    {
+                        // If no delimiter is found, copy the whole string
+                        strcpy(userAction, userAction);
+                    }
+
+                    //prep for the redirect
+                    char redirect_url[MAXLEN];
+                    if (strcmp(userAction, "add") == 0)
+                    {
+                        snprintf(redirect_url, sizeof(redirect_url), "/AddCar.html?employeeId=%d", emp_id);
+                    }
+                    else if (strcmp(userAction, "remove") == 0)
+                    {
+                        snprintf(redirect_url, sizeof(redirect_url), "/RemoveCar.html?employeeId=%d", emp_id);
+                    }
+                    else if (strcmp(userAction, "update") == 0)
+                    {
+                        snprintf(redirect_url, sizeof(redirect_url), "/UpdateCarDecide.html?employeeId=%d", emp_id);
+                    }
+
+                    // Set status code and Location header for redirection
+                    printf("Status: 302 Found\n");
+                    printf("Location: %s\n\n", redirect_url);  // Dynamic URL is placed here
+
+                }
             }
             else if(strncmp(action, "ByValue", 7) == 0)
             {
@@ -826,6 +1028,18 @@ void url_decode(char *src)
         src++;
     }
     *dest = '\0';
+}
+
+// Function to convert a hexadecimal string to a byte array
+int hex_to_bytes(const char* hex_str, uint8_t* bytes)
+{
+    size_t len = strlen(hex_str);
+    if (len % 2 != 0) return -1; // Invalid hex string length
+    for (size_t i = 0; i < len / 2; i++)
+    {
+        sscanf(hex_str + 2 * i, "%2hhx", &bytes[i]);
+    }
+    return 0;
 }
 
 //function to add a record to the database
