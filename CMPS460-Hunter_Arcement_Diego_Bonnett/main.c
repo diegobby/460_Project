@@ -231,7 +231,29 @@ int main()
         //ListByValue.html GET logic
         else if (query_string && strstr(query_string, "page=ListByValue"))
         {
+            //print header info
+            printf("Content-type: text/html\n\n");
 
+            // Generate the form
+            printf("<h1 class=\"main_container\">List Cars by Value</h1>\n");
+            printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+            // Hidden input to pass the page context
+            printf("<input type=\"hidden\" name=\"page\" value=\"ByValue\">\n");
+            printf("<input type=\"hidden\" name=\"action\" value=\"ByValue\">\n");
+
+            //year number
+            printf("<label for=\"value\">Value to Search By:</label>\n");
+            printf("<input type=\"number\"  name=\"value\"  id=\"value\" step=\"1\" value=\"15000\" required><br>\n");
+
+            //less than or greater than (value number)
+            printf("<p>Greater Than or Less Than the given value:</p>");
+            printf("<input type=\"radio\" name=\"direction\" id=\"greater\" value=\"GT\" required>");
+            printf("<label for=\"greater\" >Greater Than</label>");
+            printf("<input type=\"radio\" name=\"direction\" id=\"lesser\" value=\"LT\" required>");
+            printf("<label for=\"lesser\">Less Than</label>");
+
+            printf("<br><input type=\"submit\" value=\"List Cars\">\n");
+            printf("</form>\n");
         }
         //ListByYear.html GET logic
         else if (query_string && strstr(query_string, "page=ListByYear"))
@@ -610,6 +632,95 @@ int main()
             else if (strncmp(action, "update", 6) == 0) //either way print the same form for this part
             {
 
+            }
+            else if(strncmp(action, "ByValue", 7) == 0)
+            {
+                //get the needed (2) pieces of information needed for the query
+
+                char *car_data = strstr(post_data_2, "ByValue");
+                if (car_data)
+                {
+                    car_data += 8; //skip "ByValue="
+
+                    double value = atof(strstr(post_data_3, "value=") + 6);
+                    char *direction = strstr(post_data_3, "direction=") + 10;
+
+                    //additional handling for the direction
+                    char *delimiter_pos = strchr(direction, '&'); //get where the & is
+                    if (delimiter_pos != NULL)
+                    {
+                        // Copy the substring up to the delimiter
+                        size_t length = delimiter_pos - direction; // Length of substring up to delimiter
+                        strncpy(direction, direction, length);  // Copy the substring into the output
+                        direction[length] = '\0';         // Null-terminate the output string
+                    }
+                    else
+                    {
+                        // If no delimiter is found, copy the whole string
+                        strcpy(direction, direction);
+                    }
+
+                    //set up the proper query
+                    sqlite3* db = Connect();
+                    sqlite3_stmt *stmt;
+                    char *query;
+                    if(strncmp(direction, "GT", strlen(direction)) == 0)
+                    {
+                        query = "SELECT * FROM Car WHERE Value > ?";
+                    }
+                    else
+                    {
+                        query = "SELECT * FROM Car WHERE Value < ?";
+                    }
+                    int rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+                    //bind the value
+                    sqlite3_bind_double(stmt, 1, value);
+
+                    //iterate through each step (and also get the names of the make and model while doing so!
+                    int iterations = 0;
+                    while (sqlite3_step(stmt) == SQLITE_ROW)
+                    {
+                        char query[MAXLEN];
+                        snprintf(query, sizeof(query),
+                                 "SELECT Make.Name, Model.Name FROM Make, Model WHERE Make.Id = %d AND Model.Id = %d",
+                                 sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4));
+                        sqlite3_stmt *stmt2;
+                        sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
+                        sqlite3_step(stmt2);
+
+                        printf("<p>%s %s %s %d, Valued at: $%.2f With: %.2fmi/Gal With:%d License Plate:%s VIN:%s</p>\n"
+                        , sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt2, 0), sqlite3_column_text(stmt2, 1)
+                        , sqlite3_column_int(stmt, 2), sqlite3_column_double(stmt, 5), sqlite3_column_double(stmt, 8)
+                        , sqlite3_column_int(stmt, 6), sqlite3_column_text(stmt, 7), sqlite3_column_text(stmt, 9));
+                        iterations++;
+                    }
+                    if(iterations == 0) printf("<p>No Cars Found</p>");
+                }
+                else
+                {
+                    printf("<p>Error processing POST</p>");
+                }
+
+                // Generate the form
+                printf("<h1 class=\"main_container\">List Cars by Value</h1>\n");
+                printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                // Hidden input to pass the page context
+                printf("<input type=\"hidden\" name=\"page\" value=\"ByValue\">\n");
+                printf("<input type=\"hidden\" name=\"action\" value=\"ByValue\">\n");
+
+                //year number
+                printf("<label for=\"value\">Value to Search By:</label>\n");
+                printf("<input type=\"number\" name=\"value\" id=\"value\" step=\"1\" value=\"15000\" required><br>\n");
+
+                //less than or greater than (value number)
+                printf("<p>Greater Than or Less Than the given value:</p>");
+                printf("<input type=\"radio\" name=\"direction\" id=\"greater\" value=\"GT\" required>");
+                printf("<label for=\"greater\" >Greater Than</label>");
+                printf("<input type=\"radio\" name=\"direction\" id=\"lesser\" value=\"LT\" required>");
+                printf("<label for=\"lesser\">Less Than</label>");
+
+                printf("<br><input type=\"submit\" value=\"List Cars\">\n");
+                printf("</form>\n");
             }
 
         }
