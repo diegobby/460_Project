@@ -824,7 +824,6 @@ int main()
                     sqlite3_bind_text(stmt, 1, username, (int) strlen(username), SQLITE_TRANSIENT);
 
                     rc = sqlite3_step(stmt);
-                    printf("<p>%d</p>", rc);
                     if (count == 0) //username did not exist
                     {
                         //user feedback
@@ -848,7 +847,6 @@ int main()
                         printf("<br><input type=\"submit\" value=\"Sign In\">\n");
                         printf("</form>\n");
                     }
-                    /*
                     //get the salt (text in column index 3), then assemble the password + salt + pepper
                     //pepper is HRFWWTAP (Hunter Runs From Women When They Approach Him)
                     char HashMe[1024]; // Ensure this buffer is large enough for the concatenated string
@@ -885,7 +883,7 @@ int main()
                         printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
                         // Hidden input to pass the page context
                         printf("<input type=\"hidden\" name=\"page\" value=\"perform\">\n");
-                        printf("<input type=\"hidden\" name=\"action\" value=\"perform\">\n");
+                        printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
                         printf("<input type=\"hidden\" name=\"emp_id\" value=\"%d\">\n", id); //employee's id being passed to next screen
 
                         //actions
@@ -922,7 +920,7 @@ int main()
 
                         printf("<br><input type=\"submit\" value=\"Sign In\">\n");
                         printf("</form>\n");
-                    } */
+                    }
                 }
                 else //for this section we are dealing with POST from the second form (get the info and redirect via POST)
                 {
@@ -963,7 +961,6 @@ int main()
                     // Set status code and Location header for redirection
                     printf("Status: 302 Found\n");
                     printf("Location: %s\n\n", redirect_url);  // Dynamic URL is placed here
-
                 }
             }
             else if (strncmp(action, "ByValue", 7) == 0)
