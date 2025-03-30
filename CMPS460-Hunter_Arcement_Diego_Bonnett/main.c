@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <time.h> //for getting timestamps for the record table
 #include <sha256.h> //for hashing password + salt + pepper
+#include <ctype.h>
 
 #define MAXLEN 1024
 
@@ -36,6 +37,9 @@ void get_post_data(char *, size_t);
 void read_post_data(char *, int);
 void url_decode(char *);
 char* get_query_param(const char*, const char*);
+
+//prototype to get rid of leading and trailing spaces
+void strip_spaces(char *);
 
 //converter for hex to bytes (hashing)
 int hex_to_bytes(const char*, uint8_t*);
@@ -777,11 +781,11 @@ int main()
             }
             else if (strncmp(action, "SignIn", 6) == 0)
             {
-                char *employee = strstr(post_data, "SignIn");
+                char *employee = strstr(post_data_2, "SignIn");
                 if (employee)
                 {
                     //get the username and password information from the POST data
-                    char *username = strstr(post_data_3, "username=") + 10;
+                    char *username = strstr(post_data_3, "username=") + 9;
 
                     //additional handling for the username
                     char *delimiter_pos = strchr(username, '&'); //get where the & is
@@ -798,31 +802,30 @@ int main()
                         strcpy(username, username);
                     }
 
-                    char *password = strstr(post_data_3, "password=") + 10;
+                    strip_spaces(username);
 
-                    //additional handling for the password
-                    delimiter_pos = strchr(password, '&'); //get where the & is
-                    if (delimiter_pos != NULL)
-                    {
-                        // Copy the substring up to the delimiter
-                        size_t length = delimiter_pos - password; // Length of substring up to delimiter
-                        strncpy(password, password, length);  // Copy the substring into the output
-                        password[length] = '\0';         // Null-terminate the output string
-                    }
-                    else
-                    {
-                        // If no delimiter is found, copy the whole string
-                        strcpy(password, password);
-                    }
+                    char *password = strstr(post_data_2, "password=") + 9;
 
                     //see if the username exists in the database, if so get the salt (for the hash check)
                     //if not then reprint the page with the user feedback message
                     sqlite3 *db = Connect(); //connect to the database
+
+                    sqlite3_stmt *stmtC;
+                    char sqlC[] = "SELECT COUNT(*) FROM Employee WHERE Username = ?";
+                    int rcC = sqlite3_prepare_v2(db, sqlC, -1, &stmtC, NULL);
+                    sqlite3_bind_text(stmtC, 1, username, (int) strlen(username), SQLITE_TRANSIENT);
+                    sqlite3_step(stmtC);
+                    int count = sqlite3_column_int(stmtC, 0);
+                    sqlite3_finalize(stmtC);
+
                     sqlite3_stmt *stmt;
-                    char sql[] = "SELECT * FROM Employee WHERE LOWER(Username) = LOWER(?)"; //LOWER() used to check username in lowercase
+                    char sql[] = "SELECT * FROM Employee WHERE Username = ?";
                     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
                     sqlite3_bind_text(stmt, 1, username, (int) strlen(username), SQLITE_TRANSIENT);
-                    if (sqlite3_step(stmt) != SQLITE_ROW) //username did not exist
+
+                    rc = sqlite3_step(stmt);
+                    printf("<p>%d</p>", rc);
+                    if (count == 0) //username did not exist
                     {
                         //user feedback
                         printf("<p>Username or Password invalid, please ensure your username and password are correct.</p>\n");
@@ -835,17 +838,17 @@ int main()
                         printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
 
                         //username
-                        printf("<input type=\"text\" id=\"username\" value=\"username\" required>\n");
                         printf("<label for=\"username\" >Username </label>");
+                        printf("<input type=\"text\" name=\"username\" id=\"username\" required>\n");
 
                         //password
-                        printf("<input type=\"password\" id=\"pass\" value=\"pass\" required>\n");
-                        printf("<label for=\"pass\" >Password </label>");
+                        printf("<br><label for=\"pass\" >Password </label>");
+                        printf("<input type=\"password\" name=\"password\" id=\"pass\" required>\n");
 
                         printf("<br><input type=\"submit\" value=\"Sign In\">\n");
                         printf("</form>\n");
                     }
-
+                    /*
                     //get the salt (text in column index 3), then assemble the password + salt + pepper
                     //pepper is HRFWWTAP (Hunter Runs From Women When They Approach Him)
                     char HashMe[1024]; // Ensure this buffer is large enough for the concatenated string
@@ -919,7 +922,7 @@ int main()
 
                         printf("<br><input type=\"submit\" value=\"Sign In\">\n");
                         printf("</form>\n");
-                    }
+                    } */
                 }
                 else //for this section we are dealing with POST from the second form (get the info and redirect via POST)
                 {
@@ -1301,6 +1304,24 @@ char* get_query_param(const char* query_string, const char* param_name)
 
     free(query_copy);
     return param_value;
+}
+
+void strip_spaces(char *str)
+{
+    char *end;
+
+    //trim leading spaces
+    while (isspace((unsigned char)*str)) str++;
+
+    //trim trailing spaces
+    if (*str == 0)  //all spaces
+        return;
+
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end)) end--;
+
+    //null-terminate the string
+    *(end + 1) = 0;
 }
 
 //function to add a record to the database
