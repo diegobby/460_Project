@@ -35,6 +35,7 @@ int callbackCount(void *, int, char **,char **);
 void get_post_data(char *, size_t);
 void read_post_data(char *, int);
 void url_decode(char *);
+char* get_query_param(const char*, const char*);
 
 //converter for hex to bytes (hashing)
 int hex_to_bytes(const char*, uint8_t*);
@@ -57,6 +58,27 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
+            // Get the query string from the environment
+            query_string = getenv("QUERY_STRING");
+
+            // Extract employeeId from the query string
+            if (query_string == NULL)
+            {
+                printf("<p>Error: No query string provided</p>\n");
+                return 1;
+            }
+
+            // Extract employeeId using get_query_param function
+            const char* employee_id = get_query_param(query_string, "employeeId");
+            if (employee_id == NULL)
+            {
+                printf("<p>Error: No employeeId found in query string</p>\n");
+                return 1;
+            }
+
+            // Print the employeeId for debugging
+            printf("<p>Employee ID: %s</p>\n", employee_id);
+
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
             int rc;
@@ -77,6 +99,7 @@ int main()
             // Hidden input to pass the page context
             printf("<input type=\"hidden\" name=\"page\" value=\"remove\">\n");
             printf(" <input type=\"hidden\" name=\"action\" value=\"remove\">\n");
+            printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
 
             printf("  <label for=\"car\">Select Car to Remove:</label>\n");
 
@@ -114,6 +137,24 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
+            // Get the query string from the environment
+            query_string = getenv("QUERY_STRING");
+
+            // Extract employeeId from the query string
+            if (query_string == NULL)
+            {
+                printf("<p>Error: No query string provided</p>\n");
+                return 1;
+            }
+
+            // Extract employeeId using get_query_param function
+            const char* employee_id = get_query_param(query_string, "employeeId");
+            if (employee_id == NULL)
+            {
+                printf("<p>Error: No employeeId found in query string</p>\n");
+                return 1;
+            }
+
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
             int rc;
@@ -135,6 +176,7 @@ int main()
             // Hidden input to pass the page context
             printf("<input type=\"hidden\" name=\"page\" value=\"AddCar\">\n");
             printf(" <input type=\"hidden\" name=\"action\" value=\"add\">\n");
+            printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
 
             //make & model
             printf("  <label for=\"make\">Select a Make and Model:</label>\n");
@@ -302,6 +344,24 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
+            // Get the query string from the environment
+            query_string = getenv("QUERY_STRING");
+
+            // Extract employeeId from the query string
+            if (query_string == NULL) {
+                printf("<p>Erro"
+                       "r: No query string provided</p>\n");
+                return 1;
+            }
+
+            // Extract employeeId using get_query_param function
+            const char* employee_id = get_query_param(query_string, "employeeId");
+            if (employee_id == NULL)
+            {
+                printf("<p>Error: No employeeId found in query string</p>\n");
+                return 1;
+            }
+
 
         }
         //UpdateCarDecide.html GET logic
@@ -309,6 +369,24 @@ int main()
         {
             //print header info
             printf("Content-type: text/html\n\n");
+
+            // Get the query string from the environment
+            query_string = getenv("QUERY_STRING");
+
+            // Extract employeeId from the query string
+            if (query_string == NULL)
+            {
+                printf("<p>Error: No query string provided</p>\n");
+                return 1;
+            }
+
+            // Extract employeeId using get_query_param function
+            const char* employee_id = get_query_param(query_string, "employeeId");
+            if (employee_id == NULL)
+            {
+                printf("<p>Error: No employeeId found in query string</p>\n");
+                return 1;
+            }
 
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
@@ -328,8 +406,9 @@ int main()
             printf("<h1 class=\"main_container\">Choose a Car to Update</h1>\n");
             printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
             // Hidden input to pass the page context
-            printf("<input type=\"hidden\" name=\"page\" value=\"update\">\n");
-            printf(" <input type=\"hidden\" name=\"action\" value=\"update\">\n");
+            printf("<input type=\"hidden\" name=\"page\" value=\"updateDecide\">\n");
+            printf(" <input type=\"hidden\" name=\"action\" value=\"updateDecide\">\n");
+            printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
 
             printf("  <label for=\"car\">Select Car to Update:</label>\n");
 
@@ -384,7 +463,7 @@ int main()
         char post_data_3[MAXLEN];
         strcpy(post_data_3, post_data);
 
-        // Determine the action
+        //determine the action
         char *action = strstr(post_data, "action=");
         if (action)
         {
@@ -428,8 +507,25 @@ int main()
                              "DELETE FROM Car WHERE Id = %d", id);
                     int result = sqlite3_exec(db, query, NULL ,0, &errMssg);
 
-                    //add the record to the database (still need the id of the employee from POST)
+                    // Get the query string from the environment
+                    char* query_string = getenv("QUERY_STRING");
 
+                    // Extract employeeId from the query string
+                    if (query_string == NULL) {
+                        printf("<p>Error: No query string provided</p>\n");
+                        return 1;
+                    }
+
+                    // Extract employeeId using get_query_param function
+                    const char* employee_id = get_query_param(query_string, "employeeId");
+                    if (employee_id == NULL)
+                    {
+                        printf("<p>Error: No employeeId found in query string</p>\n");
+                        return 1;
+                    }
+
+                    //add the record to the database (still need the id of the employee from POST)
+                    AddRecord(db, "Removed Car", atoi(employee_id));
 
                     //print the form here again
                     sqlite3_stmt *stmt;
@@ -451,6 +547,7 @@ int main()
                     // Hidden input to pass the page context
                     printf("<input type=\"hidden\" name=\"page\" value=\"remove\">\n");
                     printf(" <input type=\"hidden\" name=\"action\" value=\"remove\">\n");
+                    printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
 
                     printf("  <label for=\"car\">Select Car to Remove:</label>\n");
 
@@ -589,14 +686,31 @@ int main()
                     printf("<p>Insertion Successful</p>");
                 }
 
-                //add the record of the action to the record table
+                // Get the query string from the environment
+                char* query_string = getenv("QUERY_STRING");
 
+                // Extract employeeId from the query string
+                if (query_string == NULL) {
+                    printf("<p>Erro"
+                           "r: No query string provided</p>\n");
+                    return 1;
+                }
+
+                // Extract employeeId using get_query_param function
+                const char* employee_id = get_query_param(query_string, "employeeId");
+                if (employee_id == NULL)
+                {
+                    printf("<p>Error: No employeeId found in query string</p>\n");
+                    return 1;
+                }
+
+                //add the record of the action to the record table
+                AddRecord(db, "Added Car", atoi(employee_id));
 
                 // Query to get car make and models
                 sqlite3_stmt *stmt2;
                 const char *sql = "SELECT Make.Id, Model.Id, Make.Name, Model.Name FROM Make, Model WHERE Make.Id = Model.Make;";
                 rc = sqlite3_prepare_v2(db, sql, -1, &stmt2, NULL);
-
 
                 //regenerate the form
                 printf("<h1 class=\"main_container\">Add a Car</h1>\n");
@@ -604,6 +718,7 @@ int main()
                 // Hidden input to pass the page context
                 printf("<input type=\"hidden\" name=\"page\" value=\"AddCar\">\n");
                 printf(" <input type=\"hidden\" name=\"action\" value=\"add\">\n");
+                printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
 
                 //make & model
                 printf("  <label for=\"make\">Select a Make and Model:</label>\n");
@@ -847,7 +962,7 @@ int main()
 
                 }
             }
-            else if(strncmp(action, "ByValue", 7) == 0)
+            else if (strncmp(action, "ByValue", 7) == 0)
             {
                 //get the needed (2) pieces of information needed for the query
 
@@ -936,7 +1051,39 @@ int main()
                 printf("<br><input type=\"submit\" value=\"List Cars\">\n");
                 printf("</form>\n");
             }
+            else if (strncmp(action, "updateDecide", 7) == 0)
+            {
+                //get the car id and the employee id from the POST
+                int carId = atoi(strstr(post_data_2, "car=") + 4);
 
+                //get the query string from the environment
+                char* query_string = getenv("QUERY_STRING");
+
+                //extract employeeId from the query string
+                if (query_string == NULL)
+                {
+                    printf("<p>Error: No query string provided</p>\n");
+                    return 1;
+                }
+
+                //extract employeeId using get_query_param function
+                const char* employee_id = get_query_param(query_string, "employeeId");
+                if (employee_id == NULL)
+                {
+                    printf("<p>Error: No employeeId found in query string</p>\n");
+                    return 1;
+                }
+
+                //generate the form using the car information as defaults
+                sqlite3* db = Connect(); //connect to the database
+                sqlite3_stmt* stmt;
+                char sql[] = "SELECT * FROM Car WHERE Id = ?";
+                int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+                sqlite3_bind_int(stmt, 1, carId);
+
+                //form generation
+                
+            }
         }
     }
 
@@ -1040,6 +1187,29 @@ int hex_to_bytes(const char* hex_str, uint8_t* bytes)
         sscanf(hex_str + 2 * i, "%2hhx", &bytes[i]);
     }
     return 0;
+}
+
+// Function to extract parameter from query string
+char* get_query_param(const char* query_string, const char* param_name)
+{
+    char *param_value = NULL;
+    char *key_value_pair;
+    char *query_copy = strdup(query_string);
+    char *token = strtok(query_copy, "&");
+
+    while (token != NULL)
+    {
+        key_value_pair = strtok(token, "=");
+        if (key_value_pair && strcmp(key_value_pair, param_name) == 0)
+        {
+            param_value = strtok(NULL, "=");  // Get the value after '='
+            break;
+        }
+        token = strtok(NULL, "&");
+    }
+
+    free(query_copy);
+    return param_value;
 }
 
 //function to add a record to the database
