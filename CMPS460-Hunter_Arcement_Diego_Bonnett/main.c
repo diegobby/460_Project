@@ -211,7 +211,7 @@ int main()
 
             //vin
             printf("  <label for=\"vin\">VIN:</label>\n");
-            printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" required><br>\n");
+            printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" pattern=\"[0-9]+\" required><br>\n");
 
             //mi/gal
             printf("  <label for=\"mpg\">Miles per Gallon:</label>\n");
@@ -247,12 +247,12 @@ int main()
             printf("<input type=\"hidden\" name=\"action\" value=\"SignIn\">\n");
 
             //username
-            printf("<input type=\"text\" id=\"username\" value=\"username\" required>\n");
             printf("<label for=\"username\" >Username </label>");
+            printf("<input type=\"text\" name=\"username\" id=\"username\" required>\n");
 
             //password
-            printf("<input type=\"password\" id=\"pass\" value=\"pass\" required>\n");
-            printf("<label for=\"pass\" >Password </label>");
+            printf("<br><label for=\"pass\" >Password </label>");
+            printf("<input type=\"password\" name=\"password\" id=\"pass\" required>\n");
 
             printf("<br><input type=\"submit\" value=\"Sign In\">\n");
             printf("</form>\n");
@@ -753,7 +753,7 @@ int main()
 
                 //vin
                 printf("  <label for=\"vin\">VIN:</label>\n");
-                printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" required><br>\n");
+                printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" pattern=\"[0-9]+\" required><br>\n");
 
                 //mi/gal
                 printf("  <label for=\"mpg\">Miles per Gallon:</label>\n");
@@ -777,7 +777,7 @@ int main()
             }
             else if (strncmp(action, "SignIn", 6) == 0)
             {
-                char *employee = strstr(post_data, "remove=");
+                char *employee = strstr(post_data, "SignIn");
                 if (employee)
                 {
                     //get the username and password information from the POST data
@@ -821,6 +821,7 @@ int main()
                     sqlite3_stmt *stmt;
                     char sql[] = "SELECT * FROM Employee WHERE LOWER(Username) = LOWER(?)"; //LOWER() used to check username in lowercase
                     int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+                    sqlite3_bind_text(stmt, 1, username, (int) strlen(username), SQLITE_TRANSIENT);
                     if (sqlite3_step(stmt) != SQLITE_ROW) //username did not exist
                     {
                         //user feedback
@@ -1081,9 +1082,99 @@ int main()
                 int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
                 sqlite3_bind_int(stmt, 1, carId);
 
+                //query to get car make and models
+                sqlite3_stmt *stmt2;
+                const char *sql2 = "SELECT Make.Id, Model.Id, Make.Name, Model.Name FROM Make, Model WHERE Make.Id = Model.Make;";
+                rc = sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL);
+
+                //query to get the car make and model (default select option)
+                sqlite3_stmt *stmt3;
+                char sql3[] = "SELECT Make.Name, Model.Name FROM Make,Model WHERE Make.Id = Model.Make AND Make.Id = ? AND Model.Id = ?";
+                int rc2 = sqlite3_prepare_v2(db, sql3, -1, &stmt3, NULL);
+                sqlite3_bind_int(stmt3, 1, sqlite3_column_int(stmt, 3));
+                sqlite3_bind_int(stmt3, 2, sqlite3_column_int(stmt, 4));
+
                 //form generation
-                
+                printf("<h1 class=\"main_container\">Update a Car</h1>\n");
+                printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                // Hidden input to pass the page context
+                printf("<input type=\"hidden\" name=\"page\" value=\"UpdateCar\">\n");
+                printf(" <input type=\"hidden\" name=\"action\" value=\"UpdateCar\">\n");
+                printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
+
+                //make & model
+                printf("  <label for=\"make\">Select a Make and Model:</label>\n");
+                printf("<select style=\"width: 500px;\" id=\"make\" name=\"make_model\" required>\n");
+
+                //default make & model
+                printf("<option value=\"%d:%d\" selected>%s %s</option>\n",
+                       sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4),
+                       sqlite3_column_text(stmt3, 0), sqlite3_column_text(stmt3, 1));
+
+                // Fetch and display car names as datalist options
+                while (sqlite3_step(stmt2) == SQLITE_ROW)
+                {
+                    //skip if this value is the same as the default
+                    if(sqlite3_column_int(stmt, 3) == sqlite3_column_int(stmt2, 0) && sqlite3_column_int(stmt, 4) == sqlite3_column_int(stmt2, 1)) continue;
+
+                    // Retrieve make and model IDs and their names
+                    int make_id = sqlite3_column_int(stmt2, 0);
+                    int model_id = sqlite3_column_int(stmt2, 1);
+                    const char *make_name = (const char *)sqlite3_column_text(stmt2, 2);
+                    const char *model_name = (const char *)sqlite3_column_text(stmt2, 3);
+
+                    // Set the option value to be a combination of make_id and model_id, separated by a colon
+                    printf("<option value=\"%d:%d\">%s %s</option>\n", make_id, model_id, make_name, model_name);
+                }
+
+                printf("</select><br>\n");
+
+                //year
+                printf("  <label for=\"year\">Year:</label>\n");
+                printf("  <input type=\"number\" name=\"year\" id=\"year\" min=\"1900\" max=\"2025\" value=\"%d\" required><br>\n",
+                       sqlite3_column_int(stmt, 2));
+
+                //mileage
+                printf("  <label for=\"mileage\">Mileage (in miles):</label>\n");
+                printf("  <input type=\"number\" name=\"mileage\" id=\"mileage\" step=\"1\" value=\"%d\" required><br>\n",
+                       sqlite3_column_int(stmt, 6));
+
+                //value
+                printf("  <label for=\"value\">Value (in dollars):</label>\n");
+                printf("  <input type=\"number\" name=\"value\" id=\"value\" step=\"1\" value=\"%.2f\" required><br>\n",
+                       sqlite3_column_double(stmt, 5));
+
+                //vin
+                printf("  <label for=\"vin\">VIN:</label>\n");
+                printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" value=\"%s\" pattern=\"[0-9]+\" required><br>\n",
+                       sqlite3_column_text(stmt, 9));
+
+                //mi/gal
+                printf("  <label for=\"mpg\">Miles per Gallon:</label>\n");
+                printf("  <input type=\"number\" name=\"mpg\" id=\"mpg\" step=\"0.1\" value=\"%.2f\" required><br>\n",
+                       sqlite3_column_double(stmt, 8));
+
+                //lic plate digits
+                printf("  <label for=\"license_plate\">License Plate:</label>\n");
+                printf("  <input type=\"text\" name=\"license_plate\" id=\"license_plate\" minlength=\"6\" maxlength=\"6\" value=\"%s\" required><br>\n",
+                       sqlite3_column_text(stmt, 7));
+
+                //color
+                printf("  <label for=\"color\">Car Color:</label>\n");
+                printf("  <input type=\"text\" name=\"color\" id=\"color\" value=\"%s\" required><br>\n",
+                       sqlite3_column_text(stmt, 1));
+
+                //end of the form
+                printf("  <input type=\"submit\" value=\"Update\">\n");
+                printf("</form>\n");
+
+                //close and finalize
+                sqlite3_finalize(stmt);
+                sqlite3_finalize(stmt2);
+                sqlite3_finalize(stmt3);
+                sqlite3_close(db);
             }
+
         }
     }
 
