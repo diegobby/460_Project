@@ -781,7 +781,7 @@ int main()
             }
             else if (strncmp(action, "SignIn", 6) == 0)
             {
-                char *employee = strstr(post_data_2, "SignIn");
+                char *employee = strstr(post_data_2, "username");
                 if (employee)
                 {
                     //get the username and password information from the POST data
