@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "c:/Users/Hunter Arcement/Documents/C Files/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug"
+			"value" : "c:/Users/Hunter Arcement/OneDrive/Documents/School Documents/Cmps-460/460_Project/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -431,7 +431,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/Hunter Arcement/Documents/C Files/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug/CMakeFiles/pkgRedirects"
+			"value" : "C:/Users/Hunter Arcement/OneDrive/Documents/School Documents/Cmps-460/460_Project/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug/CMakeFiles/pkgRedirects"
 		},
 		{
 			"name" : "CMAKE_GENERATOR",
@@ -503,7 +503,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "C:/Users/Hunter Arcement/Documents/C Files/CMPS460-Hunter_Arcement_Diego_Bonnett"
+			"value" : "C:/Users/Hunter Arcement/OneDrive/Documents/School Documents/Cmps-460/460_Project/CMPS460-Hunter_Arcement_Diego_Bonnett"
 		},
 		{
 			"name" : "CMAKE_INSTALL_PREFIX",
@@ -1119,7 +1119,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/Hunter Arcement/Documents/C Files/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug"
+			"value" : "C:/Users/Hunter Arcement/OneDrive/Documents/School Documents/Cmps-460/460_Project/CMPS460-Hunter_Arcement_Diego_Bonnett/cmake-build-debug"
 		},
 		{
 			"name" : "CMPS460_Hunter_Arcement_Diego_Bonnett_IS_TOP_LEVEL",
@@ -1143,51 +1143,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "C:/Users/Hunter Arcement/Documents/C Files/CMPS460-Hunter_Arcement_Diego_Bonnett"
-		},
-		{
-			"name" : "LIB_EAY",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to a library."
-				}
-			],
-			"type" : "FILEPATH",
-			"value" : "LIB_EAY-NOTFOUND"
-		},
-		{
-			"name" : "OPENSSL_INCLUDE_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to a file."
-				}
-			],
-			"type" : "PATH",
-			"value" : "C:/Program Files/OpenSSL/include"
-		},
-		{
-			"name" : "SSL_EAY",
-			"properties" : 
-			[
-				{
-					"name" : "ADVANCED",
-					"value" : "1"
-				},
-				{
-					"name" : "HELPSTRING",
-					"value" : "Path to a library."
-				}
-			],
-			"type" : "FILEPATH",
-			"value" : "SSL_EAY-NOTFOUND"
+			"value" : "C:/Users/Hunter Arcement/OneDrive/Documents/School Documents/Cmps-460/460_Project/CMPS460-Hunter_Arcement_Diego_Bonnett"
 		},
 		{
 			"name" : "_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED",
