@@ -63,9 +63,6 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
-            // Get the query string from the environment
-            query_string = getenv("QUERY_STRING");
-
             // Extract employeeId from the query string
             if (query_string == NULL)
             {
@@ -80,9 +77,6 @@ int main()
                 printf("<p>Error: No employeeId found in query string</p>\n");
                 return 1;
             }
-
-            // Print the employeeId for debugging
-            printf("<p>Employee ID: %s</p>\n", employee_id);
 
             sqlite3* db = Connect(); // Connect to the database
             sqlite3_stmt *stmt;
@@ -142,18 +136,15 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
-            // Get the query string from the environment
-            query_string = getenv("QUERY_STRING");
-
-            // Extract employeeId from the query string
             if (query_string == NULL)
             {
                 printf("<p>Error: No query string provided</p>\n");
                 return 1;
             }
 
-            // Extract employeeId using get_query_param function
+            // Extract employeeId from the query string
             const char* employee_id = get_query_param(query_string, "employeeId");
+
             if (employee_id == NULL)
             {
                 printf("<p>Error: No employeeId found in query string</p>\n");
@@ -349,9 +340,6 @@ int main()
             //print header info
             printf("Content-type: text/html\n\n");
 
-            // Get the query string from the environment
-            query_string = getenv("QUERY_STRING");
-
             // Extract employeeId from the query string
             if (query_string == NULL) {
                 printf("<p>Erro"
@@ -374,9 +362,6 @@ int main()
         {
             //print header info
             printf("Content-type: text/html\n\n");
-
-            // Get the query string from the environment
-            query_string = getenv("QUERY_STRING");
 
             // Extract employeeId from the query string
             if (query_string == NULL)
@@ -458,8 +443,6 @@ int main()
     //handle post requests (when a form is submitted)
     else if (strcmp(method, "POST") == 0)
     {
-        //print header info
-        printf("Content-type: text/html\n\n");
 
         char post_data[MAXLEN];
         read_post_data(post_data, MAXLEN);
@@ -475,6 +458,8 @@ int main()
             action += 7;
             if (strncmp(action, "remove", 6) == 0)
             {
+                printf("Content-type: text/html\n\n");
+
                 char *car = strstr(post_data, "remove=");
                 if (car)
                 {
@@ -512,20 +497,16 @@ int main()
                              "DELETE FROM Car WHERE Id = %d", id);
                     int result = sqlite3_exec(db, query, NULL ,0, &errMssg);
 
-                    // Get the query string from the environment
-                    char* query_string = getenv("QUERY_STRING");
-
-                    // Extract employeeId from the query string
-                    if (query_string == NULL) {
-                        printf("<p>Error: No query string provided</p>\n");
-                        return 1;
-                    }
-
-                    // Extract employeeId using get_query_param function
-                    const char* employee_id = get_query_param(query_string, "employeeId");
-                    if (employee_id == NULL)
+                    char* employee_id = strstr(post_data_3, "emp_id=");  // post_data_3 contains full POST string
+                    if (employee_id)
                     {
-                        printf("<p>Error: No employeeId found in query string</p>\n");
+                        employee_id += 7;  // Skip "emp_id="
+                        char* amp = strchr(employee_id, '&');
+                        if (amp) *amp = '\0';  // Null-terminate if there's another param after
+                    }
+                    else
+                    {
+                        printf("<p>Error: No emp_id found in POST data</p>\n");
                         return 1;
                     }
 
@@ -596,6 +577,8 @@ int main()
             }
             else if (strncmp(action, "add", 3) == 0)
             {
+                printf("Content-type: text/html\n\n");
+
                 char *car_data = strstr(post_data_2, "add");
                 int make_id;
                 int model_id;
@@ -691,21 +674,16 @@ int main()
                     printf("<p>Insertion Successful</p>");
                 }
 
-                // Get the query string from the environment
-                char* query_string = getenv("QUERY_STRING");
-
-                // Extract employeeId from the query string
-                if (query_string == NULL) {
-                    printf("<p>Erro"
-                           "r: No query string provided</p>\n");
-                    return 1;
-                }
-
-                // Extract employeeId using get_query_param function
-                const char* employee_id = get_query_param(query_string, "employeeId");
-                if (employee_id == NULL)
+                char* employee_id = strstr(post_data_3, "emp_id=");  // post_data_3 contains full POST string
+                if (employee_id)
                 {
-                    printf("<p>Error: No employeeId found in query string</p>\n");
+                    employee_id += 7;  // Skip "emp_id="
+                    char* amp = strchr(employee_id, '&');
+                    if (amp) *amp = '\0';  // Null-terminate if there's another param after
+                }
+                else
+                {
+                    printf("<p>Error: No emp_id found in POST data</p>\n");
                     return 1;
                 }
 
@@ -785,6 +763,8 @@ int main()
                 char *employee = strstr(post_data_2, "username");
                 if (employee)
                 {
+                    printf("Content-type: text/html\n\n");
+
                     //get the username and password information from the POST data
                     char *username = strstr(post_data_3, "username=") + 9;
 
@@ -926,48 +906,60 @@ int main()
                 else //for this section we are dealing with POST from the second form (get the info and redirect via POST)
                 {
                     //get the value of the radio button AND the employee id from the POST
-                    int emp_id = atoi(strstr(post_data_3, "emp_id=") + 8);
-                    char *userAction = strstr(post_data_3, "userAction=") + 12;
-
-                    //additional handling for the userAction
-                    char *delimiter_pos = strchr(userAction, '&'); //get where the & is
-                    if (delimiter_pos != NULL)
+                    int emp_id = 0;
+                    char *emp_start = strstr(post_data_3, "emp_id=");
+                    if (emp_start != NULL)
                     {
-                        // Copy the substring up to the delimiter
-                        size_t length = delimiter_pos - userAction; // Length of substring up to delimiter
-                        strncpy(userAction, userAction, length);  // Copy the substring into the output
-                        userAction[length] = '\0'; // Null-terminate the output string
+                        emp_start += 7; //length of "emp_id="
+                        emp_id = atoi(emp_start);
                     }
-                    else
+
+                    char rawAction[100];
+                    char *start = strstr(post_data_3, "userAction=");
+                    if (start != NULL)
                     {
-                        // If no delimiter is found, copy the whole string
-                        strcpy(userAction, userAction);
+                        start += 11; // length of "userAction="
+                        char *end = strchr(start, '&');
+                        if (end != NULL)
+                        {
+                            size_t len = end - start;
+                            if (len >= sizeof(rawAction)) len = sizeof(rawAction) - 1;
+                            strncpy(rawAction, start, len);
+                            rawAction[len] = '\0';
+                        }
+                        else
+                        {
+                            strncpy(rawAction, start, sizeof(rawAction) - 1);
+                            rawAction[sizeof(rawAction) - 1] = '\0';
+                        }
                     }
 
                     //prep for the redirect
-                    char redirect_url[MAXLEN];
-                    if (strcmp(userAction, "add") == 0)
+                    char redirect_url[MAXLEN] = "";;
+                    if (strcmp(rawAction, "add") == 0)
                     {
-                        snprintf(redirect_url, sizeof(redirect_url), "/AddCar.html?employeeId=%d", emp_id);
+                        snprintf(redirect_url, sizeof(redirect_url), "/cgi-bin/HD_Corp.exe?page=AddCar&employeeId=%d", emp_id);
                     }
-                    else if (strcmp(userAction, "remove") == 0)
+                    else if (strcmp(rawAction, "remove") == 0)
                     {
-                        snprintf(redirect_url, sizeof(redirect_url), "/RemoveCar.html?employeeId=%d", emp_id);
+                        snprintf(redirect_url, sizeof(redirect_url), "/cgi-bin/HD_Corp.exe?page=RemoveCar&employeeId=%d", emp_id);
                     }
-                    else if (strcmp(userAction, "update") == 0)
+                    else if (strcmp(rawAction, "update") == 0)
                     {
-                        snprintf(redirect_url, sizeof(redirect_url), "/UpdateCarDecide.html?employeeId=%d", emp_id);
+                        snprintf(redirect_url, sizeof(redirect_url), "/cgi-bin/HD_Corp.exe?page=UpdateCarDecide&employeeId=%d", emp_id);
                     }
 
                     // Set status code and Location header for redirection
-                    printf("Status: 302 Found\n");
-                    printf("Location: %s\n\n", redirect_url);  // Dynamic URL is placed here
+                    printf("Location: %s\r\n", redirect_url);
+                    printf("Content-Type: text/html\r\n");
+                    printf("\r\n");
                 }
             }
             else if (strncmp(action, "ByValue", 7) == 0)
             {
-                //get the needed (2) pieces of information needed for the query
+                printf("Content-type: text/html\n\n");
 
+                //get the needed (2) pieces of information needed for the query
                 char *car_data = strstr(post_data_2, "ByValue");
                 if (car_data)
                 {
@@ -1055,6 +1047,8 @@ int main()
             }
             else if (strncmp(action, "updateDecide", 7) == 0)
             {
+                printf("Content-type: text/html\n\n");
+
                 //get the car id and the employee id from the POST
                 int carId = atoi(strstr(post_data_2, "car=") + 4);
 
@@ -1284,24 +1278,33 @@ int hex_to_bytes(const char* hex_str, uint8_t* bytes)
 // Function to extract parameter from query string
 char* get_query_param(const char* query_string, const char* param_name)
 {
-    char *param_value = NULL;
-    char *key_value_pair;
-    char *query_copy = strdup(query_string);
-    char *token = strtok(query_copy, "&");
+    if (!query_string || !param_name) return NULL;
 
-    while (token != NULL)
+    char *query_copy = strdup(query_string); // Make a copy to safely modify
+    char *pair = strtok(query_copy, "&");
+
+    while (pair != NULL)
     {
-        key_value_pair = strtok(token, "=");
-        if (key_value_pair && strcmp(key_value_pair, param_name) == 0)
+        char *equal_sign = strchr(pair, '=');
+        if (equal_sign)
         {
-            param_value = strtok(NULL, "=");  // Get the value after '='
-            break;
+            *equal_sign = '\0'; // Split into key and value
+            char *key = pair;
+            char *value = equal_sign + 1;
+
+            if (strcmp(key, param_name) == 0)
+            {
+                // Copy value before freeing query_copy
+                char *result = strdup(value);
+                free(query_copy);
+                return result;
+            }
         }
-        token = strtok(NULL, "&");
+        pair = strtok(NULL, "&");
     }
 
     free(query_copy);
-    return param_value;
+    return NULL;
 }
 
 void strip_spaces(char *str)
