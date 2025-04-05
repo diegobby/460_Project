@@ -34,9 +34,7 @@ sqlite3* Connect();
 int callbackCount(void *, int, char **,char **);
 
 //prototypes for functions related to getting and parsing form data
-void get_post_data(char *, size_t);
 void read_post_data(char *, int);
-void url_decode(char *);
 char* get_query_param(const char*, const char*);
 
 //prototype to get rid of leading and trailing spaces
@@ -341,21 +339,115 @@ int main()
             printf("Content-type: text/html\n\n");
 
             // Extract employeeId from the query string
-            if (query_string == NULL) {
-                printf("<p>Erro"
-                       "r: No query string provided</p>\n");
+            if (query_string == NULL)
+            {
+                printf("<p>Error: No query string provided</p>\n");
                 return 1;
             }
 
-            // Extract employeeId using get_query_param function
-            const char* employee_id = get_query_param(query_string, "employeeId");
+            // Extract employeeId from the query string
+            const char* employee_id = get_query_param(query_string, "emp_Id");
             if (employee_id == NULL)
             {
                 printf("<p>Error: No employeeId found in query string</p>\n");
                 return 1;
             }
 
+            //extract the car id as well
+            const char* car_id = get_query_param(query_string, "car");
+            if (car_id == NULL)
+            {
+                printf("<p>Error: No car id found in query string</p>\n");
+                return 1;
+            }
 
+            //prepare the query(ies) for the form generation
+            sqlite3 *db = Connect();
+            sqlite3_stmt *stmt;
+            char sql[] = "SELECT * FROM Car WHERE Id = ?";
+            sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+            sqlite3_bind_int(stmt, 1, atoi(car_id));
+            sqlite3_step(stmt); //the row contains the initial car data
+
+            sqlite3_stmt *stmt2;
+            char sql2[] = "SELECT Make.Name, Model.Name FROM Make, Model WHERE Make.Id = ? AND Model.Id = ?";
+            sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL);
+            sqlite3_bind_int(stmt2, 1, sqlite3_column_int(stmt, 3));
+            sqlite3_bind_int(stmt2, 2, sqlite3_column_int(stmt, 4));
+            sqlite3_step(stmt2); //the row contains the initial car make and model names
+
+            sqlite3_stmt *stmt3;
+            char sql3[] = "SELECT Make.Name, Model.Name, Make.Id, Model.Id FROM Make, Model WHERE Make.Id != ? AND Model.Id != ? AND Model.Make = Make.Id";
+            sqlite3_prepare_v2(db, sql3, -1, &stmt3, NULL);
+            sqlite3_bind_int(stmt3, 1, sqlite3_column_int(stmt, 3));
+            sqlite3_bind_int(stmt3, 2, sqlite3_column_int(stmt, 4));
+
+            //generate the form
+            //NOTE THAT THE ID, VIN, AND LIC PLATE CAN'T BE UPDATED (INTENDED)
+            printf("<h1 class=\"main_container\">Update a Car</h1>\n");
+            printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+            // Hidden input to pass the page context
+            printf("<input type=\"hidden\" name=\"page\" value=\"UpdateCarMain\">\n");
+            printf(" <input type=\"hidden\" name=\"action\" value=\"UpdateFinal\">\n");
+            printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
+            printf(" <input type=\"hidden\" name=\"car_id\" value=\"%s\">\n", car_id); //send the car id in the POST
+
+            //make & model
+            printf("  <label for=\"make\">Make and Model:</label>\n");
+            printf("<select style=\"width: 500px;\" id=\"make\" name=\"make_model\" required>\n");
+
+            //add the current car make and model first (default)
+            printf("<option value=\"%d:%d\">%s %s</option>\n", sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4), sqlite3_column_text(stmt2, 0), sqlite3_column_text(stmt2, 1));
+
+            //fetch and display car names as datalist options
+            while (sqlite3_step(stmt3) == SQLITE_ROW)
+            {
+                //retrieve make and model IDs and their names
+                int make_id = sqlite3_column_int(stmt3, 2);
+                int model_id = sqlite3_column_int(stmt3, 3);
+                const char *make_name = (const char *)sqlite3_column_text(stmt3, 0);
+                const char *model_name = (const char *)sqlite3_column_text(stmt3, 1);
+
+                //set the option value to be a combination of make_id and model_id, separated by a colon
+                printf("<option value=\"%d:%d\">%s %s</option>\n", make_id, model_id, make_name, model_name);
+            }
+
+            printf("</select><br>\n");
+
+            //year
+            printf("  <label for=\"year\">Year:</label>\n");
+            printf("  <input type=\"number\" name=\"year\" id=\"year\" min=\"1900\" max=\"2025\" value=\"%d\" required><br>\n",
+                   sqlite3_column_int(stmt, 2));
+
+            //mileage
+            printf("  <label for=\"mileage\">Mileage (in miles):</label>\n");
+            printf("  <input type=\"number\" name=\"mileage\" id=\"mileage\" step=\"1\" value=\"%d\" required><br>\n",
+                   sqlite3_column_int(stmt, 6));
+
+            //value
+            printf("  <label for=\"value\">Value (in dollars):</label>\n");
+            printf("  <input type=\"number\" name=\"value\" id=\"value\" step=\"1\" value=\"%.2f\" required><br>\n",
+                   sqlite3_column_double(stmt, 5));
+
+            //mi/gal
+            printf("  <label for=\"mpg\">Miles per Gallon:</label>\n");
+            printf("  <input type=\"number\" name=\"mpg\" id=\"mpg\" step=\"0.1\" value=\"%.2f\" required><br>\n",
+                   sqlite3_column_double(stmt, 8));
+
+            //color
+            printf("  <label for=\"color\">Car Color:</label>\n");
+            printf("  <input type=\"text\" name=\"color\" id=\"color\" value=\"%s\" required><br>\n",
+                   sqlite3_column_text(stmt, 1));
+
+            //end of the form
+            printf("  <input type=\"submit\" value=\"Update\">\n");
+            printf("</form>\n");
+
+            //close the database connection and all the statements
+            sqlite3_finalize(stmt);
+            sqlite3_finalize(stmt2);
+            sqlite3_finalize(stmt3);
+            sqlite3_close(db);
         }
         //UpdateCarDecide.html GET logic
         else if (query_string && strstr(query_string, "page=UpdateCarDecide"))
@@ -370,7 +462,7 @@ int main()
                 return 1;
             }
 
-            // Extract employeeId using get_query_param function
+            // Extract employeeId from the query string
             const char* employee_id = get_query_param(query_string, "employeeId");
             if (employee_id == NULL)
             {
@@ -403,7 +495,7 @@ int main()
             printf("  <label for=\"car\">Select Car to Update:</label>\n");
 
             // Fetch and display car names as datalist options
-            printf("<select style=\"width: 500px;\" id=\"car\" name=\"update\" required>\n");
+            printf("<select style=\"width: 500px;\" id=\"car\" name=\"car\" required>\n");
             while (sqlite3_step(stmt) == SQLITE_ROW)
             {
                 char query[MAXLEN];
@@ -950,6 +1042,7 @@ int main()
                     }
 
                     // Set status code and Location header for redirection
+                    printf("Status: 302 Found\n");
                     printf("Location: %s\r\n", redirect_url);
                     printf("Content-Type: text/html\r\n");
                     printf("\r\n");
@@ -1047,129 +1140,134 @@ int main()
             }
             else if (strncmp(action, "updateDecide", 7) == 0)
             {
-                printf("Content-type: text/html\n\n");
-
                 //get the car id and the employee id from the POST
                 int carId = atoi(strstr(post_data_2, "car=") + 4);
 
-                //get the query string from the environment
-                char* query_string = getenv("QUERY_STRING");
-
-                //extract employeeId from the query string
-                if (query_string == NULL)
-                {
-                    printf("<p>Error: No query string provided</p>\n");
-                    return 1;
-                }
-
                 //extract employeeId using get_query_param function
-                const char* employee_id = get_query_param(query_string, "employeeId");
-                if (employee_id == NULL)
+                char* employee_id = strstr(post_data_3, "emp_id=");  // post_data_3 contains full POST string
+                if (employee_id)
                 {
-                    printf("<p>Error: No employeeId found in query string</p>\n");
+                    employee_id += 7;  // Skip "emp_id="
+                    char* amp = strchr(employee_id, '&');
+                    if (amp) *amp = '\0';  // Null-terminate if there's another param after
+                }
+                else
+                {
+                    printf("Content-type: text/html\n\n");
+                    printf("<p>Error: No emp_id found in POST data</p>\n");
+                    return 1;
+                }
+                int emp_id = atoi(employee_id);
+
+                //redirect to the UpdateCar.html via a GET
+                char redirect_url[MAXLEN] = "";
+                snprintf(redirect_url, sizeof(redirect_url), "/cgi-bin/HD_Corp.exe?page=UpdateCarMain&emp_Id=%d&car=%d", emp_id, carId);
+
+                // Set status code and Location header for redirection
+                printf("Status: 302 Found\n");
+                printf("Location: %s\r\n", redirect_url);
+                printf("Content-Type: text/html\r\n");
+                printf("\r\n");
+            }
+            else if (strncmp(action, "UpdateFinal", 7) == 0)
+            {
+                char *car_data = strstr(post_data_2, "UpdateFinal");
+                int make_id;
+                int model_id;
+                if (car_data)
+                {
+                    car_data += 13; // Skip "UpdateFinal="
+
+                    //extract the make_model value (e.g., "1:1")
+                    char *make_model = strstr(car_data, "make_model=");
+                    if (make_model)
+                    {
+                        make_model += 11;  // Skip "make_model=" part
+
+                        //split the make_model field by the colon ":"
+                        char *make = strtok(make_model, "%3A");
+                        if (make)
+                        {
+                            make_id = atoi(make);  //convert to integer for Make ID
+                            char *model = strtok(NULL, "%3A");
+                            if (model)
+                            {
+                                model_id = atoi(model);  //convert to integer for Model ID
+                            }
+                        }
+                    }
+                }
+
+                //extract the other fields
+                int year = atoi(strstr(post_data_3, "year=") + 5);
+                int mileage = atoi(strstr(post_data_3, "mileage=") + 8);
+                float value = atof(strstr(post_data_3, "value=") + 6);
+                double mpg = atof(strstr(post_data_3, "mpg=") + 4);
+                const char *color = strstr(post_data_3, "color=") + 6;
+
+                //get the car id and employee if from the post data
+                char* car_id = strstr(post_data_3, "car_id=");  // post_data_3 contains full POST string
+                if (car_id)
+                {
+                    car_id += 7;  // Skip "car_id="
+                    char* amp = strchr(car_id, '&');
+                    if (amp) *amp = '\0';  // Null-terminate if there's another param after
+                }
+                else
+                {
+                    printf("Content-type: text/html\n\n");
+                    printf("<p>Error: No car_id found in POST data</p>\n");
                     return 1;
                 }
 
-                //generate the form using the car information as defaults
-                sqlite3* db = Connect(); //connect to the database
-                sqlite3_stmt* stmt;
-                char sql[] = "SELECT * FROM Car WHERE Id = ?";
-                int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-                sqlite3_bind_int(stmt, 1, carId);
 
-                //query to get car make and models
-                sqlite3_stmt *stmt2;
-                const char *sql2 = "SELECT Make.Id, Model.Id, Make.Name, Model.Name FROM Make, Model WHERE Make.Id = Model.Make;";
-                rc = sqlite3_prepare_v2(db, sql2, -1, &stmt2, NULL);
-
-                //query to get the car make and model (default select option)
-                sqlite3_stmt *stmt3;
-                char sql3[] = "SELECT Make.Name, Model.Name FROM Make,Model WHERE Make.Id = Model.Make AND Make.Id = ? AND Model.Id = ?";
-                int rc2 = sqlite3_prepare_v2(db, sql3, -1, &stmt3, NULL);
-                sqlite3_bind_int(stmt3, 1, sqlite3_column_int(stmt, 3));
-                sqlite3_bind_int(stmt3, 2, sqlite3_column_int(stmt, 4));
-
-                //form generation
-                printf("<h1 class=\"main_container\">Update a Car</h1>\n");
-                printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
-                // Hidden input to pass the page context
-                printf("<input type=\"hidden\" name=\"page\" value=\"UpdateCar\">\n");
-                printf(" <input type=\"hidden\" name=\"action\" value=\"UpdateCar\">\n");
-                printf(" <input type=\"hidden\" name=\"emp_id\" value=\"%s\">\n", employee_id); //send the employee id in the POST
-
-                //make & model
-                printf("  <label for=\"make\">Select a Make and Model:</label>\n");
-                printf("<select style=\"width: 500px;\" id=\"make\" name=\"make_model\" required>\n");
-
-                //default make & model
-                printf("<option value=\"%d:%d\" selected>%s %s</option>\n",
-                       sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4),
-                       sqlite3_column_text(stmt3, 0), sqlite3_column_text(stmt3, 1));
-
-                // Fetch and display car names as datalist options
-                while (sqlite3_step(stmt2) == SQLITE_ROW)
+                char* employee_id = strstr(post_data_3, "emp_id=");  // post_data_3 contains full POST string
+                if (employee_id)
                 {
-                    //skip if this value is the same as the default
-                    if(sqlite3_column_int(stmt, 3) == sqlite3_column_int(stmt2, 0) && sqlite3_column_int(stmt, 4) == sqlite3_column_int(stmt2, 1)) continue;
-
-                    // Retrieve make and model IDs and their names
-                    int make_id = sqlite3_column_int(stmt2, 0);
-                    int model_id = sqlite3_column_int(stmt2, 1);
-                    const char *make_name = (const char *)sqlite3_column_text(stmt2, 2);
-                    const char *model_name = (const char *)sqlite3_column_text(stmt2, 3);
-
-                    // Set the option value to be a combination of make_id and model_id, separated by a colon
-                    printf("<option value=\"%d:%d\">%s %s</option>\n", make_id, model_id, make_name, model_name);
+                    employee_id += 7;  // Skip "emp_id="
+                    char* amp = strchr(employee_id, '&');
+                    if (amp) *amp = '\0';  // Null-terminate if there's another param after
+                }
+                else
+                {
+                    printf("Content-type: text/html\n\n");
+                    printf("<p>Error: No emp_id found in POST data</p>\n");
+                    return 1;
                 }
 
-                printf("</select><br>\n");
+                //perform the update
+                sqlite3 *db = Connect();
+                sqlite3_stmt *stmt;
+                char sql[] = "UPDATE Car SET Make = ?, Model = ?, Year = ?, Color = ?, Value = ?, Mileage = ?, Miles_PerGal = ? WHERE Id = ?";
+                sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+                sqlite3_bind_int(stmt, 1, make_id);
+                sqlite3_bind_int(stmt, 2, model_id);
+                sqlite3_bind_int(stmt, 3, year);
+                sqlite3_bind_text(stmt, 4, color, (int) strlen(color), SQLITE_TRANSIENT);
+                sqlite3_bind_double(stmt, 5, value);
+                sqlite3_bind_int(stmt, 6, mileage);
+                sqlite3_bind_double(stmt, 7, mpg);
+                sqlite3_bind_int(stmt, 8, atoi(car_id));
+                sqlite3_step(stmt);
 
-                //year
-                printf("  <label for=\"year\">Year:</label>\n");
-                printf("  <input type=\"number\" name=\"year\" id=\"year\" min=\"1900\" max=\"2025\" value=\"%d\" required><br>\n",
-                       sqlite3_column_int(stmt, 2));
 
-                //mileage
-                printf("  <label for=\"mileage\">Mileage (in miles):</label>\n");
-                printf("  <input type=\"number\" name=\"mileage\" id=\"mileage\" step=\"1\" value=\"%d\" required><br>\n",
-                       sqlite3_column_int(stmt, 6));
+                //record the action
+                AddRecord(db, "Update Car", atoi(employee_id));
 
-                //value
-                printf("  <label for=\"value\">Value (in dollars):</label>\n");
-                printf("  <input type=\"number\" name=\"value\" id=\"value\" step=\"1\" value=\"%.2f\" required><br>\n",
-                       sqlite3_column_double(stmt, 5));
-
-                //vin
-                printf("  <label for=\"vin\">VIN:</label>\n");
-                printf("  <input type=\"text\" name=\"vin\" id=\"vin\" minlength=\"17\" maxlength=\"17\" value=\"%s\" pattern=\"[0-9]+\" required><br>\n",
-                       sqlite3_column_text(stmt, 9));
-
-                //mi/gal
-                printf("  <label for=\"mpg\">Miles per Gallon:</label>\n");
-                printf("  <input type=\"number\" name=\"mpg\" id=\"mpg\" step=\"0.1\" value=\"%.2f\" required><br>\n",
-                       sqlite3_column_double(stmt, 8));
-
-                //lic plate digits
-                printf("  <label for=\"license_plate\">License Plate:</label>\n");
-                printf("  <input type=\"text\" name=\"license_plate\" id=\"license_plate\" minlength=\"6\" maxlength=\"6\" value=\"%s\" required><br>\n",
-                       sqlite3_column_text(stmt, 7));
-
-                //color
-                printf("  <label for=\"color\">Car Color:</label>\n");
-                printf("  <input type=\"text\" name=\"color\" id=\"color\" value=\"%s\" required><br>\n",
-                       sqlite3_column_text(stmt, 1));
-
-                //end of the form
-                printf("  <input type=\"submit\" value=\"Update\">\n");
-                printf("</form>\n");
-
-                //close and finalize
+                //close the database connection and finalize statements
                 sqlite3_finalize(stmt);
-                sqlite3_finalize(stmt2);
-                sqlite3_finalize(stmt3);
                 sqlite3_close(db);
-            }
 
+                //redirect to the update decision page with just the emp_id
+                char redirect_url[MAXLEN] = "";
+                snprintf(redirect_url, sizeof(redirect_url), "/cgi-bin/HD_Corp.exe?page=UpdateCarDecide&employeeId=%d", atoi(employee_id));
+
+                // Set status code and Location header for redirection
+                printf("Status: 302 Found\n");
+                printf("Location: %s\r\n", redirect_url);
+                printf("Content-Type: text/html\r\n");
+                printf("\r\n");
+            }
         }
     }
 
@@ -1212,21 +1310,6 @@ int callbackCount(void *NotUsed, int argc, char **Values,char **azColName)
 
     return (int) Values[0]; //return the count of the query
 }
-
-//function to extract post data
-void get_post_data(char *data, size_t size)
-{
-    if (getenv("CONTENT_LENGTH"))
-    {
-        int len = atoi(getenv("CONTENT_LENGTH"));
-        if (len > 0 && len < size)
-        {
-            fread(data, 1, len, stdin);
-            data[len] = '\0';
-        }
-    }
-}
-
 //function to read the post data
 void read_post_data(char *data, int size)
 {
@@ -1235,32 +1318,6 @@ void read_post_data(char *data, int size)
     {
         fgets(data, size, stdin);
     }
-}
-
-//function to decode url form data (to handle spaces and special chars)
-void url_decode(char *src)
-{
-    char *dest = src;
-    while (*src)
-    {
-        if (*src == '+')
-        {  // Convert '+' to space
-            *dest = ' ';
-        }
-        else if (*src == '%' && src[1] && src[2])
-        {  // Decode %XX hex encoding
-            char hex[3] = { src[1], src[2], '\0' };
-            *dest = (char) strtol(hex, NULL, 16);
-            src += 2;
-        }
-        else
-        {
-            *dest = *src;
-        }
-        dest++;
-        src++;
-    }
-    *dest = '\0';
 }
 
 // Function to convert a hexadecimal string to a byte array
