@@ -250,12 +250,12 @@ int main()
             printf("<br><input type=\"submit\" value=\"Sign In\">\n");
             printf("</form>\n");
         }
-        //FindByLicPlate.html GET logic
+        //FindByLicPlate.html GET logic //
         else if (query_string && strstr(query_string, "page=FindByLicPlate"))
         {
 
         }
-        //FindByVIN.html GET logic
+        //FindByVIN.html GET logic //
         else if (query_string && strstr(query_string, "page=FindByVin"))
         {
 
@@ -299,7 +299,7 @@ int main()
             sqlite3_finalize(stmt);
             sqlite3_close(db);
         }
-        //ListByMake.html GET logic
+        //ListByMake.html GET logic //
         else if (query_string && strstr(query_string, "page=ListByMake"))
         {
 
@@ -360,8 +360,42 @@ int main()
         }
         //ListByModel.html GET logic
         else if (query_string && strstr(query_string, "page=ListByModel"))
-        {  
+        {
+            //print header info
+            printf("Content-type: text/html\n\n");
 
+            // Generate the form
+            printf("<h1 class=\"main_container\">List Cars by Model</h1>\n");
+            printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+            // Hidden input to pass the page context
+            printf("<input type=\"hidden\" name=\"page\" value=\"ByModel\">\n");
+            printf("<input type=\"hidden\" name=\"action\" value=\"ByModel\">\n");
+
+            //makes
+            printf("<label for=\"model\">Model to Search By:</label>\n");
+            //fetch and display car names as datalist options
+            printf("<select style=\"width: 500px;\" id=\"model\" name=\"model\" required>\n");
+
+            sqlite3 *db = Connect();
+            sqlite3_stmt *stmt;
+            char sql[] = "SELECT * FROM Model";
+            sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+            while (sqlite3_step(stmt) == SQLITE_ROW)
+            {
+                printf("<option value=\"%d\">%s</option>\n",
+                       sqlite3_column_int(stmt, 0),
+                       sqlite3_column_text(stmt, 1));
+            }
+
+            printf("</select>\n");
+
+            printf("<br><input type=\"submit\" value=\"List Cars\">\n");
+            printf("</form>\n");
+
+            //close the database and finalize the statement
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
         }
         //ListByValue.html GET logic
         else if (query_string && strstr(query_string, "page=ListByValue"))
@@ -1180,7 +1214,7 @@ int main()
                 char *car_data = strstr(post_data_2, "ByValue");
                 if (car_data)
                 {
-                    car_data += 8; //skip "ByValue="
+                    car_data += 8;
 
                     double value = atof(strstr(post_data_3, "value=") + 6);
                     char *direction = strstr(post_data_3, "direction=") + 10;
@@ -1400,7 +1434,7 @@ int main()
                 char *car_data = strstr(post_data_2, "ByYear");
                 if (car_data)
                 {
-                    car_data += 6; //skip "ByValue="
+                    car_data += 6;
 
                     int value = atoi(strstr(post_data_3, "year=") + 5);
                     char *direction = strstr(post_data_3, "direction=") + 10;
@@ -1490,7 +1524,7 @@ int main()
                 char *car_data = strstr(post_data_2, "ByColor");
                 if (car_data)
                 {
-                    car_data += 8; //skip "ByValue="
+                    car_data += 8;
 
                     char *color = strstr(post_data_3, "color=") + 6;
 
@@ -1806,6 +1840,84 @@ int main()
                 printf("</select>\n");
 
                 printf("<br><input type=\"submit\" value=\"List Models\">\n");
+                printf("</form>\n");
+
+                //close the database and finalize the statement
+                sqlite3_finalize(stmt);
+                sqlite3_close(db);
+            }
+            else if (strncmp(action, "ByModel", 7) == 0)
+            {
+                printf("Content-type: text/html\n\n");
+
+                //get the needed (2) pieces of information needed for the query
+                char *car_data = strstr(post_data_2, "ByModel");
+                if (car_data)
+                {
+                    car_data += 7;
+
+                    int model_id = atoi(strstr(post_data_3, "model=") + 6);
+
+                    //set up the proper query
+                    sqlite3* db = Connect();
+                    sqlite3_stmt *stmt;
+                    char query[] = "SELECT * FROM Car WHERE Model = ?";
+                    int rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+                    //bind the value
+                    sqlite3_bind_int(stmt, 1, model_id);
+
+                    //iterate through each step (and also get the names of the make and model while doing so!)
+                    int iterations = 0;
+                    while (sqlite3_step(stmt) == SQLITE_ROW)
+                    {
+                        char query[MAXLEN];
+                        snprintf(query, sizeof(query),
+                                 "SELECT Make.Name, Model.Name FROM Make, Model WHERE Make.Id = %d AND Model.Id = %d",
+                                 sqlite3_column_int(stmt, 3), sqlite3_column_int(stmt, 4));
+                        sqlite3_stmt *stmt2;
+                        sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
+                        sqlite3_step(stmt2);
+
+                        printf("<p>%s %s %s %d, Valued at: $%.2f With: %.2fmi/Gal With:%d License Plate:%s VIN:%s</p>\n"
+                                , sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt2, 0), sqlite3_column_text(stmt2, 1)
+                                , sqlite3_column_int(stmt, 2), sqlite3_column_double(stmt, 5), sqlite3_column_double(stmt, 8)
+                                , sqlite3_column_int(stmt, 6), sqlite3_column_text(stmt, 7), sqlite3_column_text(stmt, 9));
+                        iterations++;
+                    }
+                    if(iterations == 0) printf("<p>No Cars Found</p>");
+                }
+                else
+                {
+                    printf("<p>Error processing POST</p>");
+                }
+
+                // Generate the form
+                printf("<h1 class=\"main_container\">List Cars by Model</h1>\n");
+                printf("<form class=\"main_container\" action=\"/cgi-bin/HD_Corp.exe\" method=\"POST\">\n");
+                // Hidden input to pass the page context
+                printf("<input type=\"hidden\" name=\"page\" value=\"ByModel\">\n");
+                printf("<input type=\"hidden\" name=\"action\" value=\"ByModel\">\n");
+
+                //makes
+                printf("<label for=\"model\">Model to Search By:</label>\n");
+                //fetch and display car names as datalist options
+                printf("<select style=\"width: 500px;\" id=\"model\" name=\"model\" required>\n");
+
+                sqlite3 *db = Connect();
+                sqlite3_stmt *stmt;
+                char sql[] = "SELECT * FROM Model";
+                sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+
+                while (sqlite3_step(stmt) == SQLITE_ROW)
+                {
+                    printf("<option value=\"%d\">%s</option>\n",
+                           sqlite3_column_int(stmt, 0),
+                           sqlite3_column_text(stmt, 1));
+                }
+
+                printf("</select>\n");
+
+                printf("<br><input type=\"submit\" value=\"List Cars\">\n");
                 printf("</form>\n");
 
                 //close the database and finalize the statement
