@@ -1334,6 +1334,19 @@ int main()
                     //bind the value
                     sqlite3_bind_double(stmt, 1, value);
 
+                    printf("<table style='border: solid 1px black;'>\n"
+                           "<tr>\n"
+                           "<th>Color</th>\n"
+                           "<th>Make</th>\n"
+                           "<th>Model</th>\n"
+                           "<th>Year</th>\n"
+                           "<th>Value</th>\n"
+                           "<th>Mi/Gal</th>\n"
+                           "<th>Mileage</th>\n"
+                           "<th>License Plate</th>\n"
+                           "<th>Vehicle Identification Number (VIN)</th>\n"
+                           "</tr>");
+
                     //iterate through each step (and also get the names of the make and model while doing so!
                     int iterations = 0;
                     while (sqlite3_step(stmt) == SQLITE_ROW)
@@ -1346,12 +1359,22 @@ int main()
                         sqlite3_prepare_v2(db, query, -1, &stmt2, NULL);
                         sqlite3_step(stmt2);
 
-                        printf("<p>%s %s %s %d, Valued at: $%.2f With: %.2fmi/Gal With:%d License Plate:%s VIN:%s</p>\n"
+                        printf("<tr> "
+                               "<td>%s</td> "
+                               "<td>%s</td> "
+                               "<td>%s</td> "
+                               "<td>%d</td> "
+                               "<td>$%.2f</td> "
+                               "<td>%.2f</td> "
+                               "<td>%d</td> "
+                               "<td>%s</td>"
+                               "<td>%s</tr>\n"
                                 , sqlite3_column_text(stmt, 1), sqlite3_column_text(stmt2, 0), sqlite3_column_text(stmt2, 1)
                                 , sqlite3_column_int(stmt, 2), sqlite3_column_double(stmt, 5), sqlite3_column_double(stmt, 8)
                                 , sqlite3_column_int(stmt, 6), sqlite3_column_text(stmt, 7), sqlite3_column_text(stmt, 9));
                         iterations++;
                     }
+                    printf("</table>");
                     if(iterations == 0) printf("<p>No Cars Found</p>");
                 }
                 else
