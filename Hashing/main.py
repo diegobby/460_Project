@@ -1,7 +1,7 @@
 import hashlib
 
 # Define the string to be hashed
-data = "GameHacker569223344HRFWWTAH"
+data = "Password123443322HRFWWTAH"
 
 # Perform SHA-256 hashing
 hashed_data = hashlib.sha256(data.encode()).hexdigest()
