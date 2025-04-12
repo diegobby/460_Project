@@ -62,7 +62,7 @@ int main()
             int rc;
 
             //query to get car names
-            const char *sql = "SELECT * FROM Car;";
+            const char *sql = "SELECT * FROM Car";
             rc = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
             if (rc != SQLITE_OK)
             {
@@ -245,7 +245,7 @@ int main()
             printf("<input type=\"hidden\" name=\"page\" value=\"ByLicPlate\">\n");
             printf("<input type=\"hidden\" name=\"action\" value=\"ByLicPlate\">\n");
 
-            //color
+            //lic plate
             printf("<label for=\"licplate\">License Plate to Search By:</label>\n");
             //fetch and display car names as datalist options
             printf("<select style=\"width: 500px;\" id=\"licplate\" name=\"licplate\" required>\n");
@@ -284,7 +284,7 @@ int main()
             printf("<input type=\"hidden\" name=\"page\" value=\"ByVin\">\n");
             printf("<input type=\"hidden\" name=\"action\" value=\"ByVin\">\n");
 
-            //color
+            //vin
             printf("<label for=\"vin\">VIN to Search By:</label>\n");
             //fetch and display car names as datalist options
             printf("<select style=\"width: 500px;\" id=\"vin\" name=\"vin\" required>\n");
@@ -330,7 +330,7 @@ int main()
 
             sqlite3 *db = Connect();
             sqlite3_stmt *stmt;
-            char sql[] = "SELECT Color FROM Car";
+            char sql[] = "SELECT DISTINCT Color FROM Car";
             sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
 
             while (sqlite3_step(stmt) == SQLITE_ROW)
@@ -401,7 +401,7 @@ int main()
             printf("<input type=\"hidden\" name=\"page\" value=\"ByMileage\">\n");
             printf("<input type=\"hidden\" name=\"action\" value=\"ByMileage\">\n");
 
-            //year number
+            //mileage
             printf("<label for=\"mileage\">Mileage to Search By:</label>\n");
             printf("<input type=\"number\"  name=\"mileage\"  id=\"mileage\" step=\"1\" value=\"50000\" required><br>\n");
 
@@ -428,7 +428,7 @@ int main()
             printf("<input type=\"hidden\" name=\"page\" value=\"ByMpg\">\n");
             printf("<input type=\"hidden\" name=\"action\" value=\"ByMpg\">\n");
 
-            //year number
+            //mpg
             printf("<label for=\"mileage\">Mi/Gal to Search By:</label>\n");
             printf("<input type=\"number\"  name=\"mpg\"  id=\"mpg\" step=\"1\" value=\"20.0\" required><br>\n");
 
@@ -494,7 +494,7 @@ int main()
             printf("<input type=\"hidden\" name=\"page\" value=\"ByValue\">\n");
             printf("<input type=\"hidden\" name=\"action\" value=\"ByValue\">\n");
 
-            //year number
+            //value
             printf("<label for=\"value\">Value to Search By:</label>\n");
             printf("<input type=\"number\"  name=\"value\"  id=\"value\" step=\"1\" value=\"15000\" required><br>\n");
 
