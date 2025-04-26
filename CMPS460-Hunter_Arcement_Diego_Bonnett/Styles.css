@@ -194,9 +194,11 @@
 }
 
 .main_container {
+    display: grid;
     justify-items: center;
     padding-top: 25px;
 }
 .main_content {
+    display: grid;
     justify-items: center;
 }
